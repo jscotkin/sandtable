@@ -4,6 +4,9 @@ from collections import namedtuple
 from matplotlib import pyplot as plt
 import asyncio, telnetlib3
 import math
+import sys
+
+#numpy.set_printoptions(threshold=sys.maxsize) # print full numpy arrays
 
 # return contours based on closest to the origin
 def get_contours_in_distance_order(image):
@@ -54,8 +57,8 @@ plotcols = 7
 plotindex = 1
 
 plt.figure(figsize=(20,10))
-img = cv.imread('img3.jpg')
-plt.subplot(plotrows,plotcols,plotindex),plt.imshow(img)
+img = cv.imread('img4.jpg', 1)
+plt.subplot(plotrows,plotcols,plotindex),plt.imshow(img[:,:,::-1]) # convert BGR to RGB
 plt.title('Original'), plt.xticks([]), plt.yticks([])
 plotindex += 1
 
@@ -64,7 +67,7 @@ plt.subplot(plotrows,plotcols,plotindex),plt.imshow(img_gray, cmap='gray')
 plt.title('Gray '), plt.xticks([]), plt.yticks([])
 plotindex += 1
 
-th = cv.threshold(img_gray, 75, 255, cv.THRESH_BINARY_INV)[1]
+th = cv.threshold(img_gray, 90, 255, cv.THRESH_BINARY_INV)[1]
 plt.subplot(plotrows,plotcols,plotindex),plt.imshow(th, cmap='gray')
 plt.title('TH '), plt.xticks([]), plt.yticks([])
 plotindex += 1
@@ -90,25 +93,29 @@ print(cv.contourArea(sand_contour))
 
 sand_contour_image = img.copy()
 
-#cv.drawContours(sand_contour_image, [sand_contour], -1, (255, 0, 0), 12)
+#cv.drawContours(sand_contour_image, [sand_contour], -1, (0, 0, 255), 12)
 x,y,w,h = cv.boundingRect(sand_contour)
-cv.rectangle(sand_contour_image, (x, y), (x+w, y+h), (255, 0, 0), 12)
+cv.rectangle(sand_contour_image, (x, y), (x+w, y+h), (0, 0, 255), 12)
 sand_box = Box(x,y,w,h)
 
-sand_table_drawable_width = 550 # hardcoded to my sand table
+plt.subplot(plotrows,plotcols,plotindex), plt.imshow(sand_contour_image[:,:,::-1])
+plt.title('sand contour'), plt.xticks([]), plt.yticks([])
+plotindex += 1
+
+sand_table_drawable_width = 545 # hardcoded to my sand table
 sand_table_drawable_height = 1280 # hardcoded to my sand table
 
-sand_table_visible_width = 550 # hardcoded to my sand table
-sand_table_visible_height = 1360 # hardcoded to my sand table
+sand_table_visible_width = 585 # hardcoded to my sand table
+sand_table_visible_height = 1335 # hardcoded to my sand table
+
+sand_table_left_offset = 20 
+sand_table_right_offset = 20
 
 sand_x_scale_factor = w / sand_table_visible_width
 sand_y_scale_factor = h / sand_table_visible_height
 
 print(sand_box)
 
-plt.subplot(plotrows,plotcols,plotindex), plt.imshow(sand_contour_image)
-plt.title('sand contour'), plt.xticks([]), plt.yticks([])
-plotindex += 1
 
 # Now find what's on the table
 
@@ -117,63 +124,113 @@ plt.subplot(plotrows,plotcols,plotindex), plt.imshow(objects_only_inv, cmap='gra
 plt.title('objects_only_inv '), plt.xticks([]), plt.yticks([])
 plotindex += 1
 
-xbuffer = 20
-ybuffer = 20
+def plot_rects_around_objects():
+    global plotindex
+    result2 = img.copy()
 
-gcode = "G1 F1500\n"
-gcode += "\n"
+    xbuffer = 20 # extra border around the object
+    ybuffer = 20
 
-result2 = img.copy()
-plotindex = 9 
-for contour in get_contours_in_distance_order(objects_only_inv):
-    area = cv.contourArea(contour)
-    print(area)
-    if area < 30000:
-        continue
-    cv.drawContours(result2, [contour], -1, (255, 0, 0), 12)
-    
-    x,y,w,h = cv.boundingRect(contour)
-    print(x,y,w,h)
-    cv.rectangle(result2, (x, y), (x+w, y+h), (255, 0, 0), 12)
+    gcode = "G1 F1500\n"
+    gcode += "\n"
+    for contour in get_contours_in_distance_order(objects_only_inv):
+        area = cv.contourArea(contour)
+        if area < 30000:
+            continue
+        print(contour)
+        cv.drawContours(result2, [contour], -1, (0, 0, 255), 12)
+        
+        x,y,w,h = cv.boundingRect(contour)
+        print(x,y,w,h)
+    #    cv.rectangle(result2, (x, y), (x+w, y+h), (255, 0, 0), 12)
 
-    # left and right look backwards but are correct given the frame transformation to gcode coords
-    right = (x - sand_box.x)/sand_x_scale_factor
-    right = sand_table_visible_width - right # transform into gcode coordinates
-    right = right + xbuffer
-    right = min(right, sand_table_drawable_width)
+        # left and right look backwards but are correct given the frame transformation to gcode coords
+        right = (x - sand_box.x)/sand_x_scale_factor
+        right = sand_table_visible_width - right # transform into gcode coordinates
+        right = right + xbuffer
+        right = min(right, sand_table_drawable_width)
 
-    left = (x + w - sand_box.x)/sand_x_scale_factor
-    left = sand_table_visible_width - left # transform into gcode coordinates
-    left = left - xbuffer
-    left = max(left, 0)
+        left = (x + w - sand_box.x)/sand_x_scale_factor
+        left = sand_table_visible_width - left # transform into gcode coordinates
+        left = left - xbuffer
+        left = max(left, 0)
 
 
-    lower = max((y - sand_box.y)/sand_y_scale_factor - ybuffer, 0)
-    upper = min((y+h - sand_box.y)/sand_y_scale_factor + ybuffer, sand_table_drawable_height)
+        lower = max((y - sand_box.y)/sand_y_scale_factor - ybuffer, 0)
+        upper = min((y+h - sand_box.y)/sand_y_scale_factor + ybuffer, sand_table_drawable_height)
 
-    gcode += f"G1 X{left:.0f} Y{lower:.0f}\n"
-    gcode += f"G1 X{right:.0f} Y{lower:.0f}\n"
-    gcode += f"G1 X{right:.0f} Y{upper:.0f}\n"
-    gcode += f"G1 X{left:.0f} Y{upper:.0f}\n"
-    gcode += f"G1 X{left:.0f} Y{lower:.0f}\n"
+        gcode += f"G1 X{left:.0f} Y{lower:.0f}\n"
+        gcode += f"G1 X{right:.0f} Y{lower:.0f}\n"
+        gcode += f"G1 X{right:.0f} Y{upper:.0f}\n"
+        gcode += f"G1 X{left:.0f} Y{upper:.0f}\n"
+        gcode += f"G1 X{left:.0f} Y{lower:.0f}\n"
 
-    # repeat these two to end on the upper right to minimize breaking lines
-    gcode += f"G1 X{right:.0f} Y{lower:.0f}\n"
-    gcode += f"G1 X{right:.0f} Y{upper:.0f}\n"
+        # repeat these two to end on the upper right to minimize breaking lines
+        gcode += f"G1 X{right:.0f} Y{lower:.0f}\n"
+        gcode += f"G1 X{right:.0f} Y{upper:.0f}\n"
 
-    mask = fill_contour(objects_only_inv, contour)
+        mask = fill_contour(objects_only_inv, contour)
 
-    plt.subplot(plotrows,plotcols,plotindex), plt.imshow(mask, cmap='gray')
-    plt.title('object '), plt.xticks([]), plt.yticks([])
+        plt.subplot(plotrows,plotcols,plotindex), plt.imshow(mask, cmap='gray')
+        plt.title('object '), plt.xticks([]), plt.yticks([])
+        plotindex += 1
+
+
+    plt.subplot(plotrows,plotcols,plotindex), plt.imshow(result2[:,:,::-1])
+    plt.title('objects '), plt.xticks([]), plt.yticks([])
     plotindex += 1
 
+    print(gcode)
 
-plt.subplot(plotrows,plotcols,plotindex), plt.imshow(result2)
-plt.title('objects '), plt.xticks([]), plt.yticks([])
-plotindex += 1
+def plot_contours_around_objects():
+    global plotindex
+    result2 = img.copy()
 
-print(gcode)
+    xbuffer = 20 # extra border around the object
+    ybuffer = 20
 
+    gcode = "G1 F1500\n"
+    gcode += "\n"
+    for contour in get_contours_in_distance_order(objects_only_inv):
+        area = cv.contourArea(contour)
+        if area < 30000:
+            continue
+        print(contour)
+        cv.drawContours(result2, [contour], -1, (0, 0, 255), 12)
+        mask = fill_contour(objects_only_inv, contour)
+
+        plt.subplot(plotrows,plotcols,plotindex), plt.imshow(mask, cmap='gray')
+        plt.title('object '), plt.xticks([]), plt.yticks([])
+        plotindex += 1
+
+
+#        x,y,w,h = cv.boundingRect(contour)
+#        print(x,y,w,h)
+#        cv.rectangle(result2, (x, y), (x+w, y+h), (255, 0, 0), 12)
+
+        for point in contour:
+            x,y = point[0]
+            x = (x - sand_box.x)/sand_x_scale_factor
+            x = sand_table_visible_width - x - sand_table_left_offset
+
+            y = (y - sand_box.y)/sand_y_scale_factor
+
+            x = min(x, sand_table_drawable_width)
+            x = max(x, 0)
+            y = min(y, sand_table_drawable_height)
+            y = max(y, 0)
+
+            gcode += f"G1 X{x:.0f} Y{y:.0f}\n"
+
+    plt.subplot(plotrows,plotcols,plotindex), plt.imshow(result2[:,:,::-1])
+    plt.title('objects '), plt.xticks([]), plt.yticks([])
+    plotindex += 1
+
+    print(gcode)
+    return gcode
+
+#gcode = plot_rects_around_objects()
+gcode = plot_contours_around_objects()
 
 plt.show()
 
