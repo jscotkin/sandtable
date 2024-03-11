@@ -5,7 +5,7 @@ The program's welcome message:
 
     Welcome to SandSketch!
     SandSketch requires a PC and a PlayStation 5 DualSense controller.
-    You should be facing the long side of your table (so Y=0 is to your right, and max Y to your left.
+    You should be facing the long side of your table so Y=0 is to your right, and max Y to your left.
     
     Use left and right joysticks like an etch-a-sketch.
     
