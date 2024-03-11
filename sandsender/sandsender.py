@@ -7,7 +7,7 @@ TABLE_PORT = 8080
 
 SPEED = 2000
 
-async def main(gcodeFile):
+async def main():
     print("Welcome to Sandsender!")
     print("This program takes a gcode file and sends it to your GRBL sand table over the network.")
 

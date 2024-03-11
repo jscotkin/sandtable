@@ -5,6 +5,9 @@ There's a few different things in here, all written for my ZenXY sandtable built
 # sandsketch
 Let's you use a PS5 DualSense controller and a PC to turn your sandtable into an etch-a-sketch, with a few extra controls for inituitive arcs, circles and spirals. Can also home the table and has a built-in screen wipe for all or part of the table. You can save your drawing as gcode to replay in the future.
 
+# sandsender
+Send a gcode file to your sand table over the network.
+
 # sandvision
 Experiment using OpenCV and a camera to identify objects placed on my table and outline them in the sand. Currently very specific to my table which happens to have a very identifiable black border around the white sand that makes vision a bit more straightforward.
 

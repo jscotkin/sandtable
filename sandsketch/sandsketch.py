@@ -31,11 +31,12 @@ dualsense = pydualsense()
 dualsense.init()
 
 async def send_gcode(gcode, reader, writer, gcodeFile, save_gcode = False):
+    reply = ""
     for line in gcode.split("\n"):
         if (line == ""):
             continue
         if (save_gcode):
-            gcodefile.write(line + "\n")
+            gcodeFile.write(line + "\n")
         #print(line)
         writer.write(line + "\n")
         reply = await reader.read(128)
@@ -64,7 +65,9 @@ async def main():
     print()
 
 
-    gcodeFile = open("gcode.txt", "w")
+    # Create filename with timestamp
+    gcodeFilename = "sketch_" + time.strftime("%Y%m%d-%H%M%S") + ".gcode" 
+    gcodeFile = open(gcodeFilename, "w")
 
     reader, writer = await telnetlib3.open_connection(TABLE_IP_ADDRESS, TABLE_PORT)
     reply = await reader.read(128) # read the GRBL header
@@ -87,7 +90,7 @@ async def main():
 
     arc_center = Point(x, y)
 
-    send_gcode(f"G1 F{SPEED}\n", reader, writer, gcodeFile, save_gcode=True) # set speed
+    await send_gcode(f"G1 F{SPEED}\n", reader, writer, gcodeFile, save_gcode=False) # set speed
 
     # read controller state until PlayStation button is pressed
     while not dualsense.state.ps:
@@ -166,7 +169,7 @@ async def main():
 
         gcode += gcode_post
 
-        send_gcode(gcode, reader, writer, gcodeFile, save_gcode)
+        await send_gcode(gcode, reader, writer, gcodeFile, save_gcode)
 #        for line in gcode.split("\n"):
 #           if (line == ""):
 #               continue
