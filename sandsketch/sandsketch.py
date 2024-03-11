@@ -9,6 +9,9 @@ class Point:
     x: int
     y: int
 
+TABLE_IP_ADDRESS = "192.168.1.55"
+TABLE_PORT = 8080
+
 CW = True # clockwise direction
 CCW = False # counter clockwise direction
 
@@ -18,8 +21,9 @@ X_MAX = 525
 Y_MIN = 5
 Y_MAX = 1280
 
-SPEED = 1500
+SPEED = 2000
 WIPE_SPEED = 4000
+
 
 # create dualsense
 dualsense = pydualsense()
@@ -28,6 +32,8 @@ dualsense.init()
 
 async def main():
     print("Welcome to SandSketch!")
+    print("SandSketch requires a PC and a PlayStation 5 DualSense controller.")
+    print("You should be facing the long side of your table (so Y=0 is to your right, and max Y to your left)")
     print()
     print("Use left and right joysticks like an etch-a-sketch.")
     print()
@@ -44,7 +50,7 @@ async def main():
     print()
 
 
-    reader, writer = await telnetlib3.open_connection("192.168.1.55", 8080)
+    reader, writer = await telnetlib3.open_connection(TABLE_IP_ADDRESS, TABLE_PORT)
     reply = await reader.read(128) # read the GRBL header
     print('reply:', reply)
 
@@ -63,7 +69,10 @@ async def main():
 
     reply = await reader.read(128) # should be "ok"
 
-    rate = 3
+    rate = 2
+
+    wipe_lower_left = Point(X_MIN, 600)
+    wipe_upper_right = Point(X_MAX, 500)
 
     arc_center = Point(x, y)
 
@@ -93,15 +102,23 @@ async def main():
             points = arc(x, y, arc_center, direction=CCW, spiral=True, spiral_growth=0.3) # Loose ccw spiral
         elif dualsense.state.R3:
             points = arc(x, y, arc_center, direction=CW)
-            #print(x, y, arc_center.x, arc_center.y, points) 
+            print(x, y, arc_center.x, arc_center.y, points) 
         elif dualsense.state.L3:
             points = arc(x, y, arc_center, direction=CCW)
-            #print(x, y, arc_center.x, arc_center.y, points) 
+            print(x, y, arc_center.x, arc_center.y, points) 
+        elif dualsense.state.DpadLeft:
+            wipe_lower_left.y = y
+            print(wipe_lower_left.y)
         elif dualsense.state.DpadRight:
+            wipe_upper_right.y = y
+            print(wipe_upper_right.y)
+        elif dualsense.state.share:
             #Wipe right
+            print(wipe_lower_left.x, wipe_lower_left.y, wipe_upper_right.x, wipe_upper_right.y)
             gcode = f"G1 F{WIPE_SPEED}\n" # set speed
-            points = wipeRight(x, y)
+            points = wipeRight(wipe_lower_left, wipe_upper_right)
             gcode_post = f"G1 F{SPEED}\n" # reset speed
+            print("Wiping")
         else:
             if dualsense.state.LX > 90:
                 y -= rate
@@ -141,18 +158,26 @@ async def main():
             reply = await reader.read(128)
             #print('reply:', reply)
 
-
-def wipeRight(x, y, num_lines=5):
+def wipeRight(wipe_lower_left, wipe_upper_right, num_lines=8, gap=6):
     points = []
+    points.append(wipe_lower_left)
 
-    for i in range(num_lines):
-        y = y - 5
+    x, y = (wipe_lower_left.x, wipe_lower_left.y)
+    x_end, y_end = (wipe_upper_right.x, wipe_upper_right.y)
+    print(x, y, x_end, y_end)
+
+    while(y > y_end):
+        y = y - gap
         points.append(Point(X_MIN, y))
-
-        y = y - 5
         points.append(Point(X_MAX, y))
 
+        y = y - gap
+        points.append(Point(X_MAX, y))
+        points.append(Point(X_MIN, y))
+
+    print(points)
     return points
+
 
 
 def arc(x, y, center, num_points=1, direction=CW, spiral=False, spiral_growth=0.1):
@@ -167,15 +192,18 @@ def arc(x, y, center, num_points=1, direction=CW, spiral=False, spiral_growth=0.
         if spiral:
             radius += spiral_growth
 
-        angle = arc_angle + 0.1 * (i + 1)
+        #angle = arc_angle + 0.1 * (i + 1)
+
+        # 1/radius scales the radians down as the radius gets longer so we don't buffer too inputs
+        # We add 1 to the radius so we can't divide by 0.
+        arc_change = (1/(radius+1) * 3) 
+        angle = arc_angle + arc_change * 3 * (i + 1) 
         if (direction == CW):
             a = math.sin(angle)
             b = math.cos(angle)
         else:
             a = math.cos(angle)
             b = math.sin(angle)
-        #a = math.sin(angle) if left else math.cos(angle)
-        #b = math.cos(angle) if left else math.sin(angle)
 
         #print(angle, a, b, radius*a, radius*b)
 
