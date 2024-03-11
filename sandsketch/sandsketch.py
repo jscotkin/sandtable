@@ -178,13 +178,6 @@ async def main():
         gcode += gcode_post
 
         await send_gcode(gcode, reader, writer, gcodeFile, save_gcode)
-#        for line in gcode.split("\n"):
-#           if (line == ""):
-#               continue
-#            #print(line)
-#            writer.write(line + "\n")
-#            reply = await reader.read(128)
-#            #print('reply:', reply)
 
     gcodeFile.close()
 
