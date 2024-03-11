@@ -46,24 +46,32 @@ async def send_gcode(gcode, reader, writer, gcodeFile, save_gcode = False):
 
 
 async def main():
-    print("Welcome to SandSketch!")
-    print("SandSketch requires a PC and a PlayStation 5 DualSense controller.")
-    print("You should be facing the long side of your table (so Y=0 is to your right, and max Y to your left)")
-    print()
-    print("Use left and right joysticks like an etch-a-sketch.")
-    print()
-    print("To draw arcs, circles, or spirals, press the circle button to set the center point, then move a distance away which will set the radius.")
-    print()
-    print("Press and hold the left joystick to draw a counterclockwise arc or circle.")
-    print("Press and hold the right joystick to draw a clockwise arc or circle.")
-    print()
-    print("You can then move further away from the center point to draw concentric circles.")
-    print("Press the R1 or L1 buttons to draw tight spirals.")
-    print("Press the R2 or L2 buttons to draw loose spirals.")
-    print()
-    print("Press the options button (the one with the three lines) to home the table.")
-    print()
+    print ("""
+    Welcome to SandSketch!
+    SandSketch requires a PC and a PlayStation 5 DualSense controller.
+    You should be facing the long side of your table (so Y=0 is to your right, and max Y to your left.
+    
+    Use left and right joysticks like an etch-a-sketch.
+    
+    To draw arcs, circles, or spirals, press the circle button to set the center point, then move a distance away which will set the radius.
+    
+    Press and hold the left joystick to draw a counterclockwise arc or circle.
+    Press and hold the right joystick to draw a clockwise arc or circle.
+    
+    You can then move further away from the center point to draw concentric circles.
+    Press the R1 or L1 buttons to draw tight spirals.
+    Press the R2 or L2 buttons to draw loose spirals.
+    
+    Press the options button (the one with the three horizontal lines) to home the table.
+    
+    Press the create button (the one with the three flared lines) to wipe the table.
+    By default it will wipe the entire table, which will take a while.
+    You can also set a smaller the wipe area by pressing the right D-pad button to set the right edge to wipe to and the left D-pad button at the furthest left you'd like to start.
+    Home and Wipe commands are not saved to the gcode file.
+    """)
 
+
+    print()
 
     # Create filename with timestamp
     gcodeFilename = "sketch_" + time.strftime("%Y%m%d-%H%M%S") + ".gcode" 
@@ -85,8 +93,8 @@ async def main():
 
     rate = 2
 
-    wipe_lower_left = Point(X_MIN, 600)
-    wipe_upper_right = Point(X_MAX, 500)
+    wipe_lower_left = Point(X_MIN, Y_MAX)
+    wipe_upper_right = Point(X_MAX, Y_MIN)
 
     arc_center = Point(x, y)
 
