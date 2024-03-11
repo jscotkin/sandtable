@@ -30,6 +30,20 @@ dualsense = pydualsense()
 # find device and initialize
 dualsense.init()
 
+async def send_gcode(gcode, reader, writer, gcodeFile, save_gcode = False):
+    for line in gcode.split("\n"):
+        if (line == ""):
+            continue
+        if (save_gcode):
+            gcodefile.write(line + "\n")
+        #print(line)
+        writer.write(line + "\n")
+        reply = await reader.read(128)
+        #print('reply:', reply)
+    
+    return reply # last reply only
+
+
 async def main():
     print("Welcome to SandSketch!")
     print("SandSketch requires a PC and a PlayStation 5 DualSense controller.")
@@ -50,13 +64,10 @@ async def main():
     print()
 
 
+    gcodeFile = open("gcode.txt", "w")
+
     reader, writer = await telnetlib3.open_connection(TABLE_IP_ADDRESS, TABLE_PORT)
     reply = await reader.read(128) # read the GRBL header
-    print('reply:', reply)
-
-    gcode = f"G1 F{SPEED}\n" # set speed
-    writer.write(gcode)
-    reply = await reader.read(128)
     print('reply:', reply)
 
     gcode = f"?\n"
@@ -76,19 +87,23 @@ async def main():
 
     arc_center = Point(x, y)
 
+    send_gcode(f"G1 F{SPEED}\n", reader, writer, gcodeFile, save_gcode=True) # set speed
+
     # read controller state until PlayStation button is pressed
     while not dualsense.state.ps:
         time.sleep(0.06)
         points = []
         gcode = ""
         gcode_post = ""
+        save_gcode = True
 
         if dualsense.state.options:
             print("Homing!")
             gcode += "$X\n" # unlock alarms so we can home Y before X
             gcode += "$HY\n" # home Y
             gcode += "$HX\n" # home X
-        if dualsense.state.circle:
+            save_gcode = False
+        elif dualsense.state.circle:
             # set current x,y as center point for future circles or spirals
             arc_center = Point(x, y)
             #print(x, y, arc_center.x, arc_center.y)
@@ -118,6 +133,7 @@ async def main():
             gcode = f"G1 F{WIPE_SPEED}\n" # set speed
             points = wipeRight(wipe_lower_left, wipe_upper_right)
             gcode_post = f"G1 F{SPEED}\n" # reset speed
+            save_gcode = False
             print("Wiping")
         else:
             if dualsense.state.LX > 90:
@@ -150,13 +166,17 @@ async def main():
 
         gcode += gcode_post
 
-        for line in gcode.split("\n"):
-            if (line == ""):
-                continue
-            #print(line)
-            writer.write(line + "\n")
-            reply = await reader.read(128)
-            #print('reply:', reply)
+        send_gcode(gcode, reader, writer, gcodeFile, save_gcode)
+#        for line in gcode.split("\n"):
+#           if (line == ""):
+#               continue
+#            #print(line)
+#            writer.write(line + "\n")
+#            reply = await reader.read(128)
+#            #print('reply:', reply)
+
+    gcodeFile.close()
+
 
 def wipeRight(wipe_lower_left, wipe_upper_right, num_lines=8, gap=6):
     points = []
