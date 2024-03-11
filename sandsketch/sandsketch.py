@@ -68,6 +68,8 @@ async def main():
     By default it will wipe the entire table, which will take a while.
     You can also set a smaller the wipe area by pressing the right D-pad button to set the right edge to wipe to and the left D-pad button at the furthest left you'd like to start.
     Home and Wipe commands are not saved to the gcode file.
+
+    Press the PlayStation button to exit.
     """)
 
 
