@@ -22,6 +22,7 @@ Y_MIN = 5
 Y_MAX = 1280
 
 SPEED = 2000
+#WIPE_SPEED = 1000
 WIPE_SPEED = 4000
 
 
@@ -44,6 +45,18 @@ async def send_gcode(gcode, reader, writer, gcodeFile, save_gcode = False):
     
     return reply # last reply only
 
+async def get_current_position(reader, writer):
+    gcode = f"?\n"
+    writer.write(gcode)
+    reply = await reader.read(128) # should show status and location
+    print('reply:', reply)
+
+    x = float(reply.split('|')[1].split(':')[1].split(',')[0]) # get current xpos
+    y = float(reply.split('|')[1].split(':')[1].split(',')[1]) # get current ypos
+
+    reply = await reader.read(128) # should be "ok"
+
+    return x, y
 
 async def main():
     print ("""
@@ -83,15 +96,7 @@ async def main():
     reply = await reader.read(128) # read the GRBL header
     print('reply:', reply)
 
-    gcode = f"?\n"
-    writer.write(gcode)
-    reply = await reader.read(128) # should show status and location
-    print('reply:', reply)
-
-    x = float(reply.split('|')[1].split(':')[1].split(',')[0]) # get current xpos
-    y = float(reply.split('|')[1].split(':')[1].split(',')[1]) # get current ypos
-
-    reply = await reader.read(128) # should be "ok"
+    x,y = await get_current_position(reader, writer)
 
     rate = 2
 
@@ -115,7 +120,9 @@ async def main():
             gcode += "$X\n" # unlock alarms so we can home Y before X
             gcode += "$HY\n" # home Y
             gcode += "$HX\n" # home X
-            save_gcode = False
+            await send_gcode(gcode, reader, writer, gcodeFile, save_gcode=False)
+            x,y = await get_current_position(reader, writer)
+            continue
         elif dualsense.state.circle:
             # set current x,y as center point for future circles or spirals
             arc_center = Point(x, y)
